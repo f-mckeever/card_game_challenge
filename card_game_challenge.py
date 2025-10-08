@@ -225,22 +225,21 @@ def run_game():
     #turn counter, after 13 turns the game ends
     turn_counter = 0
 
+    #get index of player that has the 2 of clubs
+    current_player_index = who_has_2_clubs(player_list)
+
     while turn_counter < 13:
 
         print(f"\nIt's turn {turn_counter + 1}!")
+
+        #the starting player for the round
+        current_player = player_list[current_player_index]
     
         #list of cards from current trick
         current_trick = []
 
         #leading suit of trick
         leading_suit = ''
-
-        #get index of player that has the 2 of clubs
-        current_player_index = who_has_2_clubs(player_list)
-        # print("Current player: ", current_player)
-
-        #the initial starting player
-        current_player = player_list[current_player_index]
 
         #Start each trick at 0
         trick_counter = 0
@@ -275,20 +274,11 @@ def run_game():
         winning_card_index = 0
         #loop through current_trick and see if any cards of the same suit (leading_suit) have a higher value
         for played_card in current_trick:
-            print(played_card.get('card').value, played_card.get('card').suit, played_card.get('card').rank)
-            
             #check if card is correct suit
-            if played_card.get('card').suit != leading_suit:
-                print('Card is the wrong suit')
-                
-                #check if card rank is higher
-            elif played_card.get('card').rank < winning_card.rank:
-                print('Card is lower ranked')
-                
-            else:  
+            if played_card.get('card').suit == leading_suit and played_card.get('card').rank > winning_card.rank:
                 winning_card = played_card.get('card')
                 winning_card_index = counter
-                
+            #increase counter   
             counter += 1
         
         #Print nice message and add trick to winners tricks list
@@ -297,7 +287,14 @@ def run_game():
         current_trick_cards = [card.get('card') for card in current_trick]
         player_list[current_trick[winning_card_index].get('player_index')].tricks.append(current_trick_cards)
 
+        #set current_player to winning player for next trick
+        current_player_index = current_trick[winning_card_index].get('player_index')
+
+        #update the turn counter
         turn_counter += 1
+    
+    #The end of the game
+    print('\nTHE GAME IS OVER\n')
 
 
 #if player has a card in leading suit, one of those MUST be played
@@ -317,3 +314,9 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
 
 
 run_game()
+
+#TASKS
+
+#Ensure if bots can play a suit, that they MUST do so as well
+
+#Player who won the trick goes first next
