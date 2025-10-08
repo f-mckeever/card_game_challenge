@@ -309,14 +309,33 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
         play_card(current_player, ask_player_for_card_index(current_player, current_player.hand, leading_suit, current_trick), current_trick, current_player_index)
     #if bot, randomly select the card
     else:
-        play_card(current_player, randint(0, len(current_player.hand) -1), current_trick, current_player_index)
+        #check if bot has leading suit
+        if player_has_leading_suit(current_player, leading_suit):
+            #collect indexes for cards of leading suit in bot's hand
+            match_leading_suit_indexes = []
+            #loop over hand to find them
+            index_counter = 0
+            for card in current_player.hand:
+                if card.suit == leading_suit:
+                    match_leading_suit_indexes.append(index_counter)
+                index_counter += 1
+            #play card from one of those index values
+            print(f"\n{current_player.name} has {leading_suit} and so must play one!")
+            play_card(current_player, randint(match_leading_suit_indexes[0], match_leading_suit_indexes[-1]), current_trick, current_player_index)
+        #otherwise just play random card
+        else:
+            if len(current_trick) != 0: 
+                print(f"\n{current_player.name} doesn't have any{leading_suit} and so can play what they like!")
+
+            play_card(current_player, randint(0, len(current_player.hand) -1), current_trick, current_player_index)
 
 
 
+#check if bot has a card of leading suit:
+#if so they must play it
+#
 run_game()
 
 #TASKS
 
-#Ensure if bots can play a suit, that they MUST do so as well
 
-#Player who won the trick goes first next
