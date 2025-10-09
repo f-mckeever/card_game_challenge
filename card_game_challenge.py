@@ -177,15 +177,12 @@ def ask_player_for_card_index(player, player_hand, leading_suit, current_trick, 
             #check if player 
             elif not can_play_hearts(hearts_are_broken, player, leading_suit) and player_hand[int(player_input)].suit == "Hearts":
                 print(f"\nYou cannot select Hearts yet. Please select a different suit..\n.")
-                
+
             #so long as no banned actions take place, exit the loop
             else:
                 #exit loop
                 input_is_valid_number = True
                 chosen_card_allowed = True
-
-
-
 
     #return the int value of the input
     return int(player_input)
@@ -241,14 +238,6 @@ def player_has_other_suits(current_player):
     #loop over cards and return True if any other suit found
     for card in current_player.hand:
         return card.suit != 'Hearts' 
-#Player's turn:
-#Show cards, ask what card to play
-#Player input number
-#check if valid number, repeat
-#call play_card 
-
-#Bots turn
-#random int between 0 and length of hand - 1
 
 def run_game():
 
@@ -266,6 +255,7 @@ def run_game():
 
     #set Hearts Are Broken to False to start
     hearts_are_broken = False
+    hearts_are_broken_message_printed = False
 
     #get index of player that has the 2 of clubs
     current_player_index = who_has_2_clubs(player_list)
@@ -293,8 +283,10 @@ def run_game():
 
             #check if hearts are broken
             if current_trick[-1].get('card').suit == "Hearts":
-                print(f"\n{current_player.name} has played the {current_trick[-1].get('card').value} of {current_trick[-1].get('card').suit}.  HEARTS HAVE BEEN BROKEN!")
+                if not hearts_are_broken_message_printed:
+                    print(f"\n{current_player.name} has played the {current_trick[-1].get('card').value} of {current_trick[-1].get('card').suit}.\n\nHEARTS HAVE BEEN BROKEN!")
                 hearts_are_broken = True
+                hearts_are_broken_message_printed = True
             #set leading suit if necessary
             if len(current_trick) == 1:
                 leading_suit = current_trick[0].get('card').suit
@@ -343,10 +335,6 @@ def run_game():
     #The end of the game
     print('\nTHE GAME IS OVER\n')
 
-
-#if player has a card in leading suit, one of those MUST be played
-#if not, any card can be played
-
 def player_take_turn(current_player, current_trick, leading_suit, current_player_index, hearts_are_broken, can_play_hearts):
     print(f"\n{current_player.name}, what card would you like to play?\n")
     #print player's cards
@@ -380,7 +368,7 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
                 #check if bot has any suit other than hearts
                 if not hearts_are_broken and player_has_other_suits(current_player):
                     #loop over hand to get indexes of all cards that are NOT hearts
-                    print(f"\nHearts are not broken and {current_player.name} has cards of a different suit.  They must choose one of those...")
+                    print(f"\nHearts are not broken and {current_player.name} has cards of a different suit. They must choose one of those...")
                     not_hearts_indexes = []
                     counter = 0
                     for card in current_player.hand:
@@ -388,10 +376,11 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
                             not_hearts_indexes.append(counter)
                         counter += 1
                     #bot plays a card that is NOT Hearts from list of indexes of not_hearts_indexes
-                    play_card(current_player, randint(not_hearts_indexes[0], not_hearts_indexes[-1]), current_trick, current_player_index)
+                    play_card(current_player, not_hearts_indexes[randint(0, len(not_hearts_indexes) -1)], current_trick, current_player_index)
                 #otherwise, bot has no choice but to play hearts, ie can pick whatever card they want
                 else:
-                    print(f"\n{current_player.name} only has hearts! They can play one of those...")
+                    if not player_has_other_suits(current_player):
+                        print(f"\n{current_player.name} only has hearts! They can play one of those...")
                     play_card(current_player, randint(0, len(current_player.hand) -1), current_trick, current_player_index)
 
 
