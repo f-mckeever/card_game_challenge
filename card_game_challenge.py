@@ -126,7 +126,7 @@ def deal_cards(players, deck):
         player.hand = sorted(player.hand, key=lambda card : card.suit)
 
 #function to check user input for number
-def ask_player_for_card_index(player, player_hand, leading_suit, current_trick):
+def ask_player_for_card_index(player, player_hand, leading_suit, current_trick, hearts_are_broken, can_play_hearts):
 
     print("\nPlease input number of card to play...\n")
 
@@ -136,28 +136,56 @@ def ask_player_for_card_index(player, player_hand, leading_suit, current_trick):
     #set input_is_valid_number to false
     input_is_valid_number = False
 
-    #set chosen_card_allowed to False unless it is the first turn in the trick
-    chosen_card_allowed = False
-    if len(current_trick) == 0:
-        chosen_card_allowed = True
 
     #loop until valid number selected
     while not input_is_valid_number or not chosen_card_allowed:  
         #capture input
         player_input = input()
+
+
+        #Check if input is valid and within the bounds of the player's hand:
         #check if input is numeric
         if not player_input.isnumeric():
             print('\nPlease input a valid number...\n')
+
+
         #check if outside range of hand values
         elif int(player_input) < 0 or int(player_input) > len(player_hand):
             print('\nPlease input a number corresponding to a card you have...\n')
-        #check if player has leading suit and if so the suit of their chosen card must match, else they can pick whatever
-        elif player_has_leading_suit(player, leading_suit) and player_hand[int(player_input)].suit != leading_suit:
-            print(f"\nYou have at least one card that is {leading_suit}. You must select one of those...\n")
-        else: 
-            #exit loop
-            input_is_valid_number = True
-            chosen_card_allowed = True
+
+
+        #if player is going first
+        elif len(current_trick) == 0:
+            #if player has other suits , and hearts are not broken, they must play one of those
+            if not hearts_are_broken and player_has_other_suits(player) and player_hand[int(player_input)].suit == 'Hearts':
+                print(f"\nHearts are not yet broken and you have other suits. You must select one of those...\n")
+            #if hearts not broken but player has no other suits, print that
+            elif not hearts_are_broken and not player_has_other_suits(player) and player_hand[int(player_input)].suit == 'Hearts':
+                print(f"\nHearts are not yet broken, but you only have Hearts so you can play that...\n")
+
+            #so long as no banned actions take place, exit the loop
+            else:
+                #exit loop
+                input_is_valid_number = True
+                chosen_card_allowed = True
+
+        #if player is not going first
+        elif len(current_trick) != 0:
+            #check if player has leading suit and if so the suit of their chosen card must match, else they can pick whatever
+            if player_has_leading_suit(player, leading_suit) and player_hand[int(player_input)].suit != leading_suit:
+                print(f"\nYou have at least one card that is {leading_suit}. You must select one of those...\n")
+            #check if player 
+            elif not can_play_hearts(hearts_are_broken, player, leading_suit) and player_hand[int(player_input)].suit == "Hearts":
+                print(f"\nYou cannot select Hearts yet. Please select a different suit..\n.")
+                
+            #so long as no banned actions take place, exit the loop
+            else:
+                #exit loop
+                input_is_valid_number = True
+                chosen_card_allowed = True
+
+
+
 
     #return the int value of the input
     return int(player_input)
@@ -200,6 +228,19 @@ def play_card(current_player, card_index, current_trick, current_player_index):
     for played_card in current_trick:
         print(played_card.get('card').value, played_card.get('card').suit)
 
+#check if hearts_can_be_played
+def can_play_hearts(hearts_are_broken, current_player, leading_suit):
+    #if hearts are broken, can play hearts \ or they don't have the lead suit \ or they ONLY have hearts
+    if hearts_are_broken or not player_has_leading_suit(current_player, leading_suit) or not player_has_other_suits:
+        return True
+    #else return false
+    return False
+
+#check if player has any suit other than hearts
+def player_has_other_suits(current_player):
+    #loop over cards and return True if any other suit found
+    for card in current_player.hand:
+        return card.suit != 'Hearts' 
 #Player's turn:
 #Show cards, ask what card to play
 #Player input number
@@ -211,8 +252,6 @@ def play_card(current_player, card_index, current_trick, current_player_index):
 
 def run_game():
 
-    #list to apply ranked values to each card value
-    card_values_ranked = []
     #get deck
     deck = get_deck()
 
@@ -224,6 +263,9 @@ def run_game():
 
     #turn counter, after 13 turns the game ends
     turn_counter = 0
+
+    #set Hearts Are Broken to False to start
+    hearts_are_broken = False
 
     #get index of player that has the 2 of clubs
     current_player_index = who_has_2_clubs(player_list)
@@ -247,7 +289,12 @@ def run_game():
         #Loop turn until 4 cards played - each trick
         while trick_counter < 4:
             #call player_take_turn
-            player_take_turn(current_player, current_trick, leading_suit, current_player_index)
+            player_take_turn(current_player, current_trick, leading_suit, current_player_index, hearts_are_broken, can_play_hearts)
+
+            #check if hearts are broken
+            if current_trick[-1].get('card').suit == "Hearts":
+                print(f"\n{current_player.name} has played the {current_trick[-1].get('card').value} of {current_trick[-1].get('card').suit}.  HEARTS HAVE BEEN BROKEN!")
+                hearts_are_broken = True
             #set leading suit if necessary
             if len(current_trick) == 1:
                 leading_suit = current_trick[0].get('card').suit
@@ -300,13 +347,13 @@ def run_game():
 #if player has a card in leading suit, one of those MUST be played
 #if not, any card can be played
 
-def player_take_turn(current_player, current_trick, leading_suit, current_player_index):
+def player_take_turn(current_player, current_trick, leading_suit, current_player_index, hearts_are_broken, can_play_hearts):
     print(f"\n{current_player.name}, what card would you like to play?\n")
     #print player's cards
     current_player.show_hand()
     #if human, ask to select card
     if current_player_index == 0:
-        play_card(current_player, ask_player_for_card_index(current_player, current_player.hand, leading_suit, current_trick), current_trick, current_player_index)
+        play_card(current_player, ask_player_for_card_index(current_player, current_player.hand, leading_suit, current_trick, hearts_are_broken, can_play_hearts), current_trick, current_player_index)
     #if bot, randomly select the card
     else:
         #check if bot has leading suit
@@ -325,9 +372,37 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
         #otherwise just play random card
         else:
             if len(current_trick) != 0: 
-                print(f"\n{current_player.name} doesn't have any{leading_suit} and so can play what they like!")
+                print(f"\n{current_player.name} doesn't have any {leading_suit} and so can play what they like!")
+                #Bot can play any card if it is not the first turn AND they do not have the leading suit
+                play_card(current_player, randint(0, len(current_player.hand) -1), current_trick, current_player_index)
+            #ELSE the bot is leading, they can ONLY play hearts if they have no other suits
+            else:
+                #check if bot has any suit other than hearts
+                if not hearts_are_broken and player_has_other_suits(current_player):
+                    #loop over hand to get indexes of all cards that are NOT hearts
+                    print(f"\nHearts are not broken and {current_player.name} has cards of a different suit.  They must choose one of those...")
+                    not_hearts_indexes = []
+                    counter = 0
+                    for card in current_player.hand:
+                        if card.suit != 'Hearts':
+                            not_hearts_indexes.append(counter)
+                        counter += 1
+                    #bot plays a card that is NOT Hearts from list of indexes of not_hearts_indexes
+                    play_card(current_player, randint(not_hearts_indexes[0], not_hearts_indexes[-1]), current_trick, current_player_index)
+                #otherwise, bot has no choice but to play hearts, ie can pick whatever card they want
+                else:
+                    print(f"\n{current_player.name} only has hearts! They can play one of those...")
+                    play_card(current_player, randint(0, len(current_player.hand) -1), current_trick, current_player_index)
 
-            play_card(current_player, randint(0, len(current_player.hand) -1), current_trick, current_player_index)
+
+
+
+#bots turn - if they have the leading suit they must play it
+
+#if they don't - they can play any suit INCLUDING HEARTS
+
+#if they are first, they can ONLY play hearts if they only have hearts
+
 
 
 
@@ -337,5 +412,32 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
 run_game()
 
 #TASKS
+
+# \/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
+#ENSURE HEARTS RULES FOR BOT PLAYERS
+# /\/\/\/\/\/\//\/\/\/\/\/\/\/\/\/\/\/\
+
+
+#Hearts can only be played if NO CARD matches leading suit - activates 'Hearts are broken'
+#if hearts_are_broken = False AND player_has_other_suits:
+    #cannot lead with hearts
+
+#if hearts_are_broken = False and not player_has_other_suits:
+    #can 
+
+    
+
+#Hearts can only lead once broken, or if hand only has Hearts in it
+
+#Points
+
+    #1 point for every Heart
+
+    #13 points for Queen of Spades
+
+    #26 points for every OTHER player if one player gets all Hearts and the Queen of Spades
+
+#Print points to terminal at the end of the round
+
 
 
