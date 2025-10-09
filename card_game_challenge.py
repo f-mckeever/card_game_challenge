@@ -32,6 +32,7 @@ class Player():
         self.name = name
         self.hand = []
         self.tricks = []
+        self.score = 0
     #print hand
     def show_hand(self):
 
@@ -150,7 +151,7 @@ def ask_player_for_card_index(player, player_hand, leading_suit, current_trick, 
 
 
         #check if outside range of hand values
-        elif int(player_input) < 0 or int(player_input) > len(player_hand):
+        elif int(player_input) < 0 or int(player_input) > len(player_hand) - 1:
             print('\nPlease input a number corresponding to a card you have...\n')
 
 
@@ -239,6 +240,7 @@ def player_has_other_suits(current_player):
     for card in current_player.hand:
         return card.suit != 'Hearts' 
 
+#controls the running of the game
 def run_game():
 
     #get deck
@@ -333,8 +335,132 @@ def run_game():
         turn_counter += 1
     
     #The end of the game
-    print('\nTHE GAME IS OVER\n')
+    print('\nTHE GAME IS OVER!')
+    show_score(player_list)
 
+#prints the results of the game to the terminal - tots up points and orders players accordingly
+def show_score(player_list):
+    #loop over all players and count up scores
+    for player in player_list:
+        count_score_for_player(player)
+    #check if player got all hearts and the queen of spades and adjust scores if so
+    bonus_points(player_list)
+
+    #who bonus pointed if anyone
+    bonus_pointer = who_bonus_pointed(player_list)
+
+    #print leaderboard to the screen
+    print("The Final Scores:\n")
+    position = 1
+    for player in sorted((player_list), key=lambda player: player.score):
+        print(f"[{position}]: {player.name} with {player.score} points!\n")
+        #print player's cards to validate scores
+        print(f"\t{player.name}'s cards:\n")
+        for trick in player.tricks:
+            for card in trick:
+                print("\t", card.value, card.suit)
+                if card.suit == 'Hearts':
+                    print("\t\t\t+1 point")
+                if card.suit == 'Spades' and card.value == 'Q':
+                    print("\t\t\t+13 points")
+        print("\n")
+        
+        #if someone bonus pointed, 
+        if bonus_pointer >= 0:
+            #if player is the one to bonus point, print -26 points
+            if player_list[bonus_pointer] == player:
+                print('\tAll Hearts and Q Spades')
+                print("\t\t\t-26 points")
+            #print +26 points for all other players
+            else:
+                print(f"{player_list[bonus_pointer].name} got all Hearts and Queen of Spades")
+                print("\t\t\t+26 points\n")
+        position += 1
+
+#little function to tot up each player's scores
+def count_score_for_player(player):
+    #loop over tricks and tot up the score
+    for trick in player.tricks:
+        #loop over each card and add points for hearts or queen of spades
+        for card in trick:
+            if card.suit == 'Hearts':
+                player.score += 1
+            elif card.suit == 'Spades' and card.value == "Q":
+                player.score += 13
+
+#return index of player who earned bonus points or -1 if none did
+def who_bonus_pointed(player_list):
+    #set index_counter to
+    player_index_counter = 0
+    bonus_winning_player_index = -1
+
+    #loop each player
+    for player in player_list:
+        #if player has all hearts and the queen of spades, return true and set winning
+        if all_hearts_queen_spades(player):
+            print(f"\n{player.name} got all of the Hearts and the Queen of Spades! Everyone else gains 26 points!")
+            bonus_winning_player_index = player_index_counter
+            break
+        #update counter
+        player_index_counter += 1
+    
+    return bonus_winning_player_index
+
+#little function to check if any player got ALL hearts and the queen of spades, and if so every other player gets 26 points and they get 0
+def bonus_points(player_list):
+
+    #check if anyone won and if so who
+    bonus_winning_player_index = who_bonus_pointed(player_list)
+
+    #if winner found, add and subtract points appropriately
+    if bonus_winning_player_index >= 0:
+        #add 26 points to every player
+        for player in player_list:
+            player.score += 26
+
+        #subtract 52 points from winning player
+        player_list[bonus_winning_player_index].score -= 52
+
+#checks if player has all hearts and the queen of spades
+def all_hearts_queen_spades(player):
+    #List of player's cards
+    card_list = []
+    for trick in player.tricks:
+        for card in trick:
+            card_list.append(card)
+
+    #check if cards include queen of spades
+    if has_queen_of_spades(card_list):
+        #.pop queen of spades
+        queenless_card_list = [card for card in card_list if card.suit != 'Spades' and card.value != 'Q']
+        print("has_queen_of_spades")
+        for card in card_list:
+            print(card.value, card.suit)
+        #check if queenless_card_list is all hearts
+        if only_hearts(queenless_card_list):
+            return True
+
+#checks if card_list contains the queen of spades
+def has_queen_of_spades(card_list):
+    #if queen of spades found, return true
+        # return len([card for card in card_list if card.suit == 'Spades' and card.value == 'Q']) == 1
+
+        for card in card_list:
+            if card.suit == 'Spades' and card.value == 'Q':
+                return True
+        
+        return False
+
+#check if list is all hearts
+def only_hearts(card_list):
+    #if any other suit found, return false
+    for card in card_list:
+            if card.suit != 'Hearts':
+                return False
+        
+    return True
+
+#controls the turn flow for a player
 def player_take_turn(current_player, current_trick, leading_suit, current_player_index, hearts_are_broken, can_play_hearts):
     print(f"\n{current_player.name}, what card would you like to play?\n")
     #print player's cards
@@ -374,7 +500,11 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
                     for card in current_player.hand:
                         if card.suit != 'Hearts':
                             not_hearts_indexes.append(counter)
+                            print('These are the indexes:', card.value, card.suit,  counter)
+
                         counter += 1
+                    
+                    
                     #bot plays a card that is NOT Hearts from list of indexes of not_hearts_indexes
                     play_card(current_player, not_hearts_indexes[randint(0, len(not_hearts_indexes) -1)], current_trick, current_player_index)
                 #otherwise, bot has no choice but to play hearts, ie can pick whatever card they want
@@ -383,50 +513,13 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
                         print(f"\n{current_player.name} only has hearts! They can play one of those...")
                     play_card(current_player, randint(0, len(current_player.hand) -1), current_trick, current_player_index)
 
-
-
-
-#bots turn - if they have the leading suit they must play it
-
-#if they don't - they can play any suit INCLUDING HEARTS
-
-#if they are first, they can ONLY play hearts if they only have hearts
-
-
-
-
-#check if bot has a card of leading suit:
-#if so they must play it
-#
 run_game()
 
 #TASKS
 
-# \/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/\/
-#ENSURE HEARTS RULES FOR BOT PLAYERS
-# /\/\/\/\/\/\//\/\/\/\/\/\/\/\/\/\/\/\
+#Fix bug where bots can start on hearts when they have another suit available
 
 
-#Hearts can only be played if NO CARD matches leading suit - activates 'Hearts are broken'
-#if hearts_are_broken = False AND player_has_other_suits:
-    #cannot lead with hearts
-
-#if hearts_are_broken = False and not player_has_other_suits:
-    #can 
-
-    
-
-#Hearts can only lead once broken, or if hand only has Hearts in it
-
-#Points
-
-    #1 point for every Heart
-
-    #13 points for Queen of Spades
-
-    #26 points for every OTHER player if one player gets all Hearts and the Queen of Spades
-
-#Print points to terminal at the end of the round
 
 
 
