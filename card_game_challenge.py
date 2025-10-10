@@ -308,12 +308,28 @@ def card_swap(player_list):
             #loop 3 times to select indexes
             loop_counter = 1
             while loop_counter <= 3:
-                #add a random int between 0 and 12, ensuring only unique numbers are added
-                random_index = randint(0, 12)
-                if random_index not in swap_card_indexes:
-                    swap_card_indexes.append(random_index)
-                    swap_card_absolute_ranks.append(player.hand[random_index].absolute_rank)
-                    loop_counter += 1
+
+                #if player has queen of spades, swap it
+                if has_queen_of_spades(player.hand) and len(swap_card_indexes) == 0:
+                    index_counter = 0
+                    for card in player.hand:
+                        if card.absolute_rank == 211:
+                            swap_card_indexes.append(index_counter)
+                            swap_card_absolute_ranks.append(player.hand[index_counter].absolute_rank)
+                            loop_counter += 1
+                        index_counter += 1
+                else:
+                    #add a random int between 0 and 12, ensuring only unique numbers are added
+                    random_index = randint(0, 12)
+                    if random_index not in swap_card_indexes:
+                        swap_card_indexes.append(random_index)
+                        swap_card_absolute_ranks.append(player.hand[random_index].absolute_rank)
+                        loop_counter += 1
+
+            #inform user
+            print(f"\n{player.name} has chosen to give:\n")
+            for index in swap_card_indexes:
+                print(f"The {player.hand[index].value} of {player.hand[index].suit}")
 
             #add cards to the list and remove from player's hand
             for index in swap_card_indexes:
@@ -624,12 +640,39 @@ run_game()
 
 #TASKS
 
-#bot - try not to win tricks
+#absolute rank of queen of spades is 211
+
 
 #bot - lose q spades whenever possible
+# when can lose it:
+# can swap at the beginning of the game
+
+# dont have leading suit && has Q Spades
+
+# is spades and ace of spades and or king of spades have been played
 
 #bot - if possible, dont play q spades or high heart
 
-#
+#bot - try not to win tricks
+
+#can play queen of spades
 
 
+def can_burn_queen_spades(player, current_trick, leading_suit):
+
+    #if they don't have queen of spades: false
+    if not has_queen_of_spades(player.hand):
+        return False
+    
+    #if current trick has the king or ace of spades
+    for card in current_trick:
+        #check if spades
+        if card.suit == 'Spades':
+            #check if king or ace
+            if card.value == 'A' or card.value == 'K':
+                return True
+    
+    #if player does not have leading suit
+    if not player_has_leading_suit(player, leading_suit):
+        return True
+    
