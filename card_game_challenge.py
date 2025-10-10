@@ -1,25 +1,13 @@
-#Card object, number and suit
-#52 instances of card /\
-
-#Shuffle function to randomly deal cards to 4 players
-
-#Player object, hand consisting of cards?
-
-#Can print player's hand to the terminal
-
-
-#Class representing a Card
-
-#number / value is randomly assigned AND suit is randomly assigned
-from random import randint, shuffle
+from random import randint
 
 #class representing a card
 class Card():
     #__init__
-    def __init__(self, suit, value, rank):
+    def __init__(self, suit, value, rank, absolute_rank):
         self.suit = suit
         self.value = value
         self.rank = rank
+        self.absolute_rank = absolute_rank
 
     #print what card is
     def what(self):
@@ -69,8 +57,18 @@ def get_deck():
         else:
             rank = int(value) - 1
 
+        #calculate absolute_rank value: Hearts = + 30, Spades = +20, Diamonds = +10 { + rank
+        if suit == 'Hearts':
+            absolute_rank = rank + 300
+        elif suit == 'Spades':
+            absolute_rank = rank + 200
+        elif suit == 'Diamonds':
+            absolute_rank = rank + 100
+        else:
+            absolute_rank = rank
+
         #new card
-        card = Card(suit, value, rank)
+        card = Card(suit, value, rank, absolute_rank)
         #if card is unique, add it to deck
         if is_unique(card, deck):
             #add to deck
@@ -123,8 +121,8 @@ def deal_cards(players, deck):
             #update card_count and overall_card_count
             card_count += 1
             overall_card_count += 1
-        #sort player hands by suit for clarity
-        player.hand = sorted(player.hand, key=lambda card : card.suit)
+    #sort player hands by suit for clarity
+        player.hand = sorted(player.hand, key=lambda card : card.absolute_rank)
 
 #function to check user input for number
 def ask_player_for_card_index(player, player_hand, leading_suit, current_trick, hearts_are_broken, can_play_hearts):
@@ -240,6 +238,108 @@ def player_has_other_suits(current_player):
     for card in current_player.hand:
         return card.suit != 'Hearts' 
 
+#3 cards passwed between players at start of round
+def card_swap(player_list):
+    print("\nPlease select 3 cards to give to the player ahead of you...\n")
+    #swap pot list
+    cards_to_swap = []
+    #for each player
+    for player in player_list:
+        #for human player
+        if player.name == 'Player 1':
+            #ask for index of first, second, then third card
+            swap_card_indexes = []
+            swap_card_absolute_ranks = []
+
+            #set player_input to empty string
+            player_input = ""
+
+            #show player's current hand
+            card_count = 0
+
+            for card in player.hand:
+                print(f"[{card_count}]\t{card.value} {card.suit}")
+                card_count += 1
+
+            #loop until valid number selected
+            while len(swap_card_indexes) != 3: 
+
+                print(f"\nPlease select card number {len(swap_card_indexes) +1} to swap...\n")
+
+                #capture input
+                player_input = input()
+
+                #Check if input is valid and within the bounds of the player's hand:
+                #check if input is numeric
+                if not player_input.isnumeric():
+                    print('\nPlease input a valid number...\n')
+
+                #check if outside range of hand values
+                elif int(player_input) < 0 or int(player_input) > len(player.hand) - 1:
+                    print('\nPlease input a number corresponding to a card you have...\n')
+
+                #check if card_index already in swap_card_indexes
+                elif int(player_input) in swap_card_indexes:
+                    print('\nCard already selected, please select another...')
+
+                #so long as no banned actions take place, forward the loop
+                else:
+                    #add index to list
+                    swap_card_indexes.append(int(player_input))
+                    swap_card_absolute_ranks.append(player.hand[int(player_input)].absolute_rank)
+
+                    #inform user
+                    print(f"\nYou have chosen to give:\n")
+                    for index in swap_card_indexes:
+                        print(f"The {player.hand[index].value} of {player.hand[index].suit}")
+
+            #add cards at chosen indexes to the list
+            for index in swap_card_indexes:
+                cards_to_swap.append(player.hand[index])
+                
+            for rank in swap_card_absolute_ranks:
+                player.hand = [card for card in player.hand if card.absolute_rank != rank]
+
+        #for bot player
+        else:
+            #list to store randomly selected bot card indexes
+            swap_card_indexes = []
+            swap_card_absolute_ranks = []
+            #loop 3 times to select indexes
+            loop_counter = 1
+            while loop_counter <= 3:
+                #add a random int between 0 and 12, ensuring only unique numbers are added
+                random_index = randint(0, 12)
+                if random_index not in swap_card_indexes:
+                    swap_card_indexes.append(random_index)
+                    swap_card_absolute_ranks.append(player.hand[random_index].absolute_rank)
+                    loop_counter += 1
+
+            #add cards to the list and remove from player's hand
+            for index in swap_card_indexes:
+                cards_to_swap.append(player.hand[index])
+            
+            for rank in swap_card_absolute_ranks:
+                player.hand = [card for card in player.hand if card.absolute_rank != rank]
+
+            #print informative message to terminal
+            print(f"\n{player.name} has selected 3 cards to swap.\n")
+
+    #assign new cards to each player in "clockwise" order
+    cards_to_swap_counter = 0
+    for card in cards_to_swap :
+        if cards_to_swap_counter < 3 :
+            player_list[1].hand.append(card)
+        elif cards_to_swap_counter < 6 :
+            player_list[2].hand.append(card)
+        elif cards_to_swap_counter < 9 :
+            player_list[3].hand.append(card)
+        else:
+            print(f"Player 1 received the {card.value} of {card.suit}")
+            player_list[0].hand.append(card)
+        #update counter
+        cards_to_swap_counter += 1
+
 #controls the running of the game
 def run_game():
 
@@ -259,8 +359,16 @@ def run_game():
     hearts_are_broken = False
     hearts_are_broken_message_printed = False
 
+    #do the card swap
+    card_swap(player_list)
+
     #get index of player that has the 2 of clubs
     current_player_index = who_has_2_clubs(player_list)
+
+    #organise player hands again to ensure they are neat
+    for player in player_list:
+        #sort player hands by suit for clarity
+        player.hand = sorted(player.hand, key=lambda card : card.absolute_rank)
 
     while turn_counter < 13:
 
@@ -500,7 +608,6 @@ def player_take_turn(current_player, current_trick, leading_suit, current_player
                     for card in current_player.hand:
                         if card.suit != 'Hearts':
                             not_hearts_indexes.append(counter)
-                            print('These are the indexes:', card.value, card.suit,  counter)
 
                         counter += 1
                     
@@ -517,9 +624,12 @@ run_game()
 
 #TASKS
 
-#Fix bug where bots can start on hearts when they have another suit available
+#bot - try not to win tricks
 
+#bot - lose q spades whenever possible
 
+#bot - if possible, dont play q spades or high heart
 
+#
 
 
