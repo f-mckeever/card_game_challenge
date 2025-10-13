@@ -657,13 +657,13 @@ run_game()
 
 #can play queen of spades
 
-
+#check if player can burn queen - only can do so if not leading
 def can_burn_queen_spades(player, current_trick, leading_suit):
 
     #if they don't have queen of spades: false
     if not has_queen_of_spades(player.hand):
         return False
-    
+  
     #if current trick has the king or ace of spades
     for card in current_trick:
         #check if spades
@@ -671,8 +671,11 @@ def can_burn_queen_spades(player, current_trick, leading_suit):
             #check if king or ace
             if card.value == 'A' or card.value == 'K':
                 return True
-    
+        
     #if player does not have leading suit
-    if not player_has_leading_suit(player, leading_suit):
+    if not player_has_leading_suit(player, leading_suit) and len(current_trick) != 0:
         return True
-    
+  
+    #fall back 
+    return False
+
